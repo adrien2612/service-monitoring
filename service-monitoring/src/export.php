@@ -227,23 +227,27 @@ if (isset($preferences['hostgroup']) && $preferences['hostgroup']) {
 SQL;
     $query = CentreonUtils::conditionBuilder($query, $hostgroupIdCondition);
 }
-if (isset($preferences['servicegroup']) && $preferences['servicegroup']) {
-    $mainQueryParameters[] = [
-        'parameter' => ':servicegroup_id',
-        'value' => $preferences['servicegroup'],
-        'type' => PDO::PARAM_INT
-    ];
+    if (isset($preferences['servicegroup']) && $preferences['servicegroup']) {
+        $resultsSG = explode(',', $preferences['servicegroup']);
+        $querySG ='';
+        foreach ($resultsSG as $resultSG) {
+            if ($querySG != '') {
+                $querySG .= ', ';
+            }
+            $querySG .= ":id_" . $resultSG;
+            $mainQueryParameters[] = [
+                'parameter' => ':id_' . $resultSG,
+                'value' => (int)$resultSG,
+                'type' => PDO::PARAM_INT
+            ];
+        }
     $servicegroupCondition = <<<SQL
- s.service_id IN (SELECT service_service_id
-      FROM {$conf_centreon['db']}.servicegroup_relation
-      WHERE servicegroup_sg_id = :servicegroup_id
-      UNION
-      SELECT sgr.service_service_id
-      FROM {$conf_centreon['db']}.servicegroup_relation sgr, {$conf_centreon['db']}.host_service_relation hsr
-      WHERE hsr.hostgroup_hg_id = sgr.hostgroup_hg_id
-      AND sgr.servicegroup_sg_id = :servicegroup_id) 
+s.service_id IN (
+        SELECT DISTINCT service_id 
+        FROM services_servicegroups 
+        WHERE servicegroup_id IN ({$querySG})) 
 SQL;
-    $query = CentreonUtils::conditionBuilder($query, $servicegroupCondition);
+        $query = CentreonUtils::conditionBuilder($query, $servicegroupCondition);
 }
 if (isset($preferences["display_severities"]) && $preferences["display_severities"] && isset($preferences['criticality_filter']) && $preferences['criticality_filter'] != "") {
     $tab = explode(",", $preferences['criticality_filter']);
