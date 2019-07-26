@@ -318,18 +318,15 @@ if (isset($preferences['display_severities']) &&
         if ($labels != '') {
             $labels .= ',';
         }
-        $labels .= "'" . trim($p) . "'";
+        $labels .= '\'' . trim($p) . '\'';
     }
-    $query2 = "SELECT sc_id FROM service_categories WHERE sc_name IN ({$labels})";
-    $RES = $db->query($query2);
-    $idC = '';
-    while ($d1 = $RES->fetch()) {
-        if ($idC != '') {
-            $idC .= ',';
-        }
-        $idC .= $d1['sc_id'];
-    }
-    $query .= " AND cv2.`value` IN ({$idC}) ";
+    $servicecategoriesIdCondition = <<<SQL
+s.service_id IN (
+    SELECT service_service_id 
+    FROM {$conf_centreon['db']}.service_categories_relation
+    WHERE sc_id IN ({$labels}))
+SQL;
+    $query = CentreonUtils::conditionBuilder($query, $servicecategoriesIdCondition);
 }
 if (!$centreon->user->admin) {
     $pearDB = $db;
